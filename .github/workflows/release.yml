@@ -64,6 +64,8 @@ jobs:
       - name: Opublikuj release
         env:
           GH_TOKEN: ${{ github.token }}
+          # To repo nie jest checkoutowane, więc gh musi dostać je wprost.
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
         run: |
           sha=$(git -C src rev-parse HEAD)
