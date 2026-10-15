@@ -1,7 +1,7 @@
 # panel-clock-releases
 
 Gotowe wydania budzika [panel-clock](https://github.com/JacekWalczak92/panel-clock):
-APK aplikacji **M5DialPilot** i firmware ESPHome `panel-budzik.yaml`.
+APK aplikacji **J-Waker** (dawniej M5DialPilot) i firmware ESPHome `panel-budzik.yaml`.
 
 Najnowsza wersja: [Releases → Latest](https://github.com/JacekWalczak92/panel-clock-releases/releases/latest).
 

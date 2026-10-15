@@ -69,7 +69,7 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           sha=$(git -C src rev-parse HEAD)
-          apk="M5DialPilot-${TAG}.apk"
+          apk="J-Waker-${TAG}.apk"
           cp src/app/app/build/outputs/apk/release/app-release.apk "$apk"
           cp src/esphome/panel-budzik.yaml panel-budzik.yaml
           ver=$(grep -m1 'version:' panel-budzik.yaml | sed 's/.*"\(.*\)".*/\1/')
@@ -77,5 +77,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$apk" panel-budzik.yaml --clobber
           else
-            gh release create "$TAG" "$apk" panel-budzik.yaml --target "$GITHUB_SHA" --title "M5DialPilot ${TAG}" --notes "$notes"
+            gh release create "$TAG" "$apk" panel-budzik.yaml --target "$GITHUB_SHA" --title "J-Waker ${TAG}" --notes "$notes"
           fi
