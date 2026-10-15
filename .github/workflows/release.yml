@@ -24,6 +24,8 @@ jobs:
         with:
           repository: JacekWalczak92/panel-clock
           ref: ${{ inputs.source_ref }}
+          # panel-clock jest prywatne - potrzebny token z dostępem do odczytu tego repo.
+          token: ${{ secrets.SOURCE_TOKEN }}
           path: src
 
       - uses: actions/setup-java@v5
