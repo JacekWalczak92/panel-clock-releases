@@ -1,0 +1,77 @@
+name: Release APK
+
+# Buduje M5DialPilot z repozytorium panel-clock i publikuje APK
+# jako release w tym repozytorium.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag release'u, np. v14.0.1"
+        required: true
+      source_ref:
+        description: "Gałąź / tag / commit w panel-clock"
+        required: false
+        default: "main"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          repository: JacekWalczak92/panel-clock
+          ref: ${{ inputs.source_ref }}
+          path: src
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Android SDK jest już na runnerze; doinstalowujemy tylko potrzebną platformę.
+      - name: Android SDK 36
+        run: |
+          sdkm=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | sort -V | tail -1)/sdkmanager
+          yes | "$sdkm" --licenses > /dev/null || true
+          "$sdkm" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Przygotuj klucz do podpisu
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Brak sekretu ANDROID_KEYSTORE_BASE64 - APK podpisane kluczem debug."
+          fi
+
+      - name: Zbuduj APK
+        working-directory: src/app
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Opublikuj release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          sha=$(git -C src rev-parse HEAD)
+          apk="M5DialPilot-${TAG}.apk"
+          cp src/app/app/build/outputs/apk/release/app-release.apk "$apk"
+          cp src/esphome/panel-budzik.yaml panel-budzik.yaml
+          ver=$(grep -m1 'version:' panel-budzik.yaml | sed 's/.*"\(.*\)".*/\1/')
+          notes="Zbudowane z [panel-clock@${sha::7}](https://github.com/JacekWalczak92/panel-clock/commit/${sha}). Firmware panel-budzik: ${ver}."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$apk" panel-budzik.yaml --clobber
+          else
+            gh release create "$TAG" "$apk" panel-budzik.yaml --target "$GITHUB_SHA" --title "M5DialPilot ${TAG}" --notes "$notes"
+          fi
